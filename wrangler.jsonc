@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sonicmemoir",
+  "compatibility_date": "2026-04-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sonicmemoir-db",
+      "database_id": "e7b8f314-2f0f-4059-8237-8a68d2bd096f"
+    }
+  ]
+}
