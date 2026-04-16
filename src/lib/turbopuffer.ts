@@ -31,15 +31,15 @@ export async function searchArchetypesViaTurbopuffer(input: {
 
     return result.rows.map((row) => ({
       id: String(row.id),
-      title: String(row.attributes?.title ?? ''),
-      description: String(row.attributes?.description ?? ''),
-      mood: row.attributes?.mood as ArchetypeDocument['mood'],
-      era: String(row.attributes?.era ?? ''),
-      intensity: row.attributes?.intensity as ArchetypeDocument['intensity'],
-      motifs: (row.attributes?.motifs as string[]) ?? [],
-      sonicPalette: (row.attributes?.sonicPalette as string[]) ?? [],
-      soundtrackPrompt: String(row.attributes?.soundtrackPrompt ?? ''),
-      sfxPrompts: (row.attributes?.sfxPrompts as ArchetypeDocument['sfxPrompts']) ?? [],
+      title: String(row.title ?? ''),
+      description: String(row.description ?? ''),
+      mood: row.mood as ArchetypeDocument['mood'],
+      era: String(row.era ?? ''),
+      intensity: row.intensity as ArchetypeDocument['intensity'],
+      motifs: (row.motifs as string[]) ?? [],
+      sonicPalette: (row.sonicPalette as string[]) ?? [],
+      soundtrackPrompt: String(row.soundtrackPrompt ?? ''),
+      sfxPrompts: (row.sfxPrompts as ArchetypeDocument['sfxPrompts']) ?? [],
     }));
   } catch {
     return null;
@@ -56,16 +56,14 @@ export async function upsertPrivateMemory(sessionId: string, memory: MemoryRecor
       upsert_rows: [
         {
           id: memory.id,
-          attributes: {
-            title: memory.title,
-            text: memory.text,
-            mood: memory.mood,
-            era: memory.era,
-            intensity: memory.intensity,
-            tags: memory.tags,
-            sonicMotifs: memory.sonicMotifs,
-            createdAt: memory.createdAt,
-          },
+          title: memory.title,
+          text: memory.text,
+          mood: memory.mood,
+          era: memory.era,
+          intensity: memory.intensity,
+          tags: memory.tags,
+          sonicMotifs: memory.sonicMotifs,
+          createdAt: memory.createdAt,
         },
       ],
     });
@@ -83,17 +81,15 @@ export async function seedPublicArchetypesInTurbopuffer(docs: ArchetypeDocument[
     await ns.write({
       upsert_rows: docs.map((doc) => ({
         id: doc.id,
-        attributes: {
-          title: doc.title,
-          description: doc.description,
-          mood: doc.mood,
-          era: doc.era,
-          intensity: doc.intensity,
-          motifs: doc.motifs,
-          sonicPalette: doc.sonicPalette,
-          soundtrackPrompt: doc.soundtrackPrompt,
-          sfxPrompts: doc.sfxPrompts,
-        },
+        title: doc.title,
+        description: doc.description,
+        mood: doc.mood,
+        era: doc.era,
+        intensity: doc.intensity,
+        motifs: doc.motifs,
+        sonicPalette: doc.sonicPalette,
+        soundtrackPrompt: doc.soundtrackPrompt,
+        sfxPrompts: doc.sfxPrompts,
       })),
     });
     return { ok: true };
