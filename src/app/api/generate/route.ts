@@ -24,15 +24,16 @@ export async function POST(req: Request) {
     mood: body.mood as never,
   });
 
-  await seedPublicArchetypesIfNeeded();
+  const seedResult = await seedPublicArchetypesIfNeeded();
   const privateMemories = await getMemoriesBySession(body.sessionId);
-  const turbopufferRefs = await searchArchetypesViaTurbopuffer({
+  const turbopufferSearch = await searchArchetypesViaTurbopuffer({
     text: normalized.text,
     mood: normalized.mood,
     era: normalized.era,
     intensity: normalized.intensity,
     tags: normalized.tags,
   });
+  const turbopufferRefs = turbopufferSearch.rows;
   const publicRefs = turbopufferRefs?.length
     ? turbopufferRefs
     : searchPublicArchetypes({
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
     shareSlug: `${slugify(title)}-${id.slice(-5)}`,
   });
 
-  await upsertPrivateMemory(body.sessionId, record);
+  const privateUpsert = await upsertPrivateMemory(body.sessionId, record);
 
-  return NextResponse.json({ id: record.id, record });
+  return NextResponse.json({ id: record.id, record, turbopuffer: { seed: seedResult, search: turbopufferSearch.debug ?? null, privateUpsert } });
 }

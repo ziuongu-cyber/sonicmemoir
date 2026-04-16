@@ -13,9 +13,9 @@ function getClient() {
 
 async function ensurePublicSchema() {
   const client = getClient();
-  if (!client) return;
+  if (!client) throw new Error('Missing TURBOPUFFER_API_KEY');
   const ns = client.namespace(PUBLIC_NAMESPACE);
-  await ns.updateSchema({
+  return ns.updateSchema({
     schema: {
       title: { type: 'string', full_text_search: true, filterable: true },
       description: { type: 'string', full_text_search: true },
@@ -29,9 +29,9 @@ async function ensurePublicSchema() {
 
 async function ensurePrivateSchema(sessionId: string) {
   const client = getClient();
-  if (!client) return;
+  if (!client) throw new Error('Missing TURBOPUFFER_API_KEY');
   const ns = client.namespace(privateNamespace(sessionId));
-  await ns.updateSchema({
+  return ns.updateSchema({
     schema: {
       title: { type: 'string', full_text_search: true, filterable: true },
       text: { type: 'string', full_text_search: true },
@@ -49,9 +49,9 @@ export async function searchArchetypesViaTurbopuffer(input: {
   era: string;
   intensity: string;
   tags: string[];
-}): Promise<ArchetypeDocument[] | null> {
+}): Promise<{ rows: ArchetypeDocument[] | null; debug?: string }> {
   const client = getClient();
-  if (!client) return null;
+  if (!client) return { rows: null, debug: 'Missing TURBOPUFFER_API_KEY' };
 
   try {
     await ensurePublicSchema();
@@ -62,26 +62,28 @@ export async function searchArchetypesViaTurbopuffer(input: {
       include_attributes: ['title', 'description', 'mood', 'era', 'intensity', 'motifs', 'sonicPalette', 'soundtrackPrompt', 'sfxPrompts'],
     });
 
-    return result.rows.map((row) => ({
-      id: String(row.id),
-      title: String(row.title ?? ''),
-      description: String(row.description ?? ''),
-      mood: row.mood as ArchetypeDocument['mood'],
-      era: String(row.era ?? ''),
-      intensity: row.intensity as ArchetypeDocument['intensity'],
-      motifs: (row.motifs as string[]) ?? [],
-      sonicPalette: (row.sonicPalette as string[]) ?? [],
-      soundtrackPrompt: String(row.soundtrackPrompt ?? ''),
-      sfxPrompts: (row.sfxPrompts as ArchetypeDocument['sfxPrompts']) ?? [],
-    }));
-  } catch {
-    return null;
+    return {
+      rows: result.rows.map((row) => ({
+        id: String(row.id),
+        title: String(row.title ?? ''),
+        description: String(row.description ?? ''),
+        mood: row.mood as ArchetypeDocument['mood'],
+        era: String(row.era ?? ''),
+        intensity: row.intensity as ArchetypeDocument['intensity'],
+        motifs: (row.motifs as string[]) ?? [],
+        sonicPalette: (row.sonicPalette as string[]) ?? [],
+        soundtrackPrompt: String(row.soundtrackPrompt ?? ''),
+        sfxPrompts: (row.sfxPrompts as ArchetypeDocument['sfxPrompts']) ?? [],
+      })),
+    };
+  } catch (error) {
+    return { rows: null, debug: error instanceof Error ? error.message : 'search-failed' };
   }
 }
 
 export async function upsertPrivateMemory(sessionId: string, memory: MemoryRecord) {
   const client = getClient();
-  if (!client) return;
+  if (!client) return { ok: false, debug: 'Missing TURBOPUFFER_API_KEY' };
 
   try {
     await ensurePrivateSchema(sessionId);
@@ -101,14 +103,15 @@ export async function upsertPrivateMemory(sessionId: string, memory: MemoryRecor
         },
       ],
     });
-  } catch {
-    // keep app resilient
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, debug: error instanceof Error ? error.message : 'private-upsert-failed' };
   }
 }
 
 export async function seedPublicArchetypesInTurbopuffer(docs: ArchetypeDocument[]) {
   const client = getClient();
-  if (!client) return { ok: false, reason: 'missing-key' };
+  if (!client) return { ok: false, reason: 'Missing TURBOPUFFER_API_KEY' };
 
   try {
     await ensurePublicSchema();
