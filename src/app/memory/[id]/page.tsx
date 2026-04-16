@@ -50,6 +50,7 @@ export default async function MemoryPage({ params }: { params: Promise<{ id: str
           <aside className="space-y-6">
             <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
               <h3 className="text-lg font-medium">Scene layers</h3>
+              <p className="mt-3 text-xs text-white/40">Build marker: provider-debug-v2</p>
               <div className="mt-4 space-y-3">
                 {memory.assets.map((asset, index) => (
                   <div key={`${asset.label}-${index}`} className="rounded-2xl border border-white/10 bg-black/20 p-4">
