@@ -1,12 +1,14 @@
 type RuntimeLike = {
   ELEVENLABS_API_KEY?: string;
   TURBOPUFFER_API_KEY?: string;
+  TURBOPUFFER_REGION?: string;
   NEXT_PUBLIC_APP_URL?: string;
 };
 
 const HARDCODED_RUNTIME_FALLBACKS: RuntimeLike = {
   ELEVENLABS_API_KEY: 'sk_68dd14b5563a9e69525ecee7b0ebbb661f3799953c424fb9',
   TURBOPUFFER_API_KEY: 'tpuf_wvCA9WBvfBKuD8SUrbfwHFapijZH8DH6',
+  TURBOPUFFER_REGION: 'gcp-us-central1',
 };
 
 function fromProcessEnv(key: keyof RuntimeLike) {

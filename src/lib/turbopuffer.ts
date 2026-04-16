@@ -8,7 +8,7 @@ const privateNamespace = (sessionId: string) => `sonicmemoir-private-${sessionId
 function getClient() {
   const apiKey = getRuntimeEnv('TURBOPUFFER_API_KEY');
   if (!apiKey) return null;
-  return new Turbopuffer({ apiKey, logLevel: 'error' });
+  return new Turbopuffer({ apiKey, region: getRuntimeEnv('TURBOPUFFER_REGION') ?? 'gcp-us-central1', logLevel: 'error' });
 }
 
 export async function searchArchetypesViaTurbopuffer(input: {
