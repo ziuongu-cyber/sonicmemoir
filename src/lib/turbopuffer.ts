@@ -1,30 +1,14 @@
+import Turbopuffer from '@turbopuffer/turbopuffer';
 import type { ArchetypeDocument, MemoryRecord } from '@/lib/types';
 import { getRuntimeEnv } from '@/lib/runtime-env';
 
-const API_BASE = 'https://api.turbopuffer.com/v1';
 const PUBLIC_NAMESPACE = 'sonicmemoir-public-archetypes';
 const privateNamespace = (sessionId: string) => `sonicmemoir-private-${sessionId}`;
 
-async function tpFetch(path: string, init: RequestInit = {}) {
+function getClient() {
   const apiKey = getRuntimeEnv('TURBOPUFFER_API_KEY');
-  if (!apiKey) throw new Error('Missing TURBOPUFFER_API_KEY');
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      ...(init.headers ?? {}),
-    },
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Turbopuffer error ${response.status}: ${text}`);
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
+  if (!apiKey) return null;
+  return new Turbopuffer({ apiKey, logLevel: 'error' });
 }
 
 export async function searchArchetypesViaTurbopuffer(input: {
@@ -34,51 +18,86 @@ export async function searchArchetypesViaTurbopuffer(input: {
   intensity: string;
   tags: string[];
 }): Promise<ArchetypeDocument[] | null> {
-  if (!getRuntimeEnv('TURBOPUFFER_API_KEY')) return null;
+  const client = getClient();
+  if (!client) return null;
 
   try {
-    const result = await tpFetch(`/namespaces/${PUBLIC_NAMESPACE}/query`, {
-      method: 'POST',
-      body: JSON.stringify({
-        top_k: 5,
-        rank_by: ['bm25', 'document'],
-        query: `${input.text} mood:${input.mood} era:${input.era} intensity:${input.intensity} ${input.tags.join(' ')}`,
-      }),
+    const ns = client.namespace(PUBLIC_NAMESPACE);
+    const result = await ns.query({
+      top_k: 5,
+      rank_by: ['text', 'BM25', `${input.text} ${input.tags.join(' ')} ${input.mood} ${input.era} ${input.intensity}`],
+      include_attributes: ['title', 'description', 'mood', 'era', 'intensity', 'motifs', 'sonicPalette', 'soundtrackPrompt', 'sfxPrompts'],
     });
 
-    const rows = (result?.rows ?? []) as Array<{ document?: ArchetypeDocument }>;
-    return rows.map((row) => row.document).filter(Boolean) as ArchetypeDocument[];
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      title: String(row.attributes?.title ?? ''),
+      description: String(row.attributes?.description ?? ''),
+      mood: row.attributes?.mood as ArchetypeDocument['mood'],
+      era: String(row.attributes?.era ?? ''),
+      intensity: row.attributes?.intensity as ArchetypeDocument['intensity'],
+      motifs: (row.attributes?.motifs as string[]) ?? [],
+      sonicPalette: (row.attributes?.sonicPalette as string[]) ?? [],
+      soundtrackPrompt: String(row.attributes?.soundtrackPrompt ?? ''),
+      sfxPrompts: (row.attributes?.sfxPrompts as ArchetypeDocument['sfxPrompts']) ?? [],
+    }));
   } catch {
     return null;
   }
 }
 
 export async function upsertPrivateMemory(sessionId: string, memory: MemoryRecord) {
-  if (!getRuntimeEnv('TURBOPUFFER_API_KEY')) return;
+  const client = getClient();
+  if (!client) return;
 
   try {
-    await tpFetch(`/namespaces/${privateNamespace(sessionId)}`, {
-      method: 'POST',
-      body: JSON.stringify({
-        upserts: [
-          {
-            id: memory.id,
-            document: {
-              id: memory.id,
-              title: memory.title,
-              text: memory.text,
-              mood: memory.mood,
-              era: memory.era,
-              intensity: memory.intensity,
-              tags: memory.tags,
-              sonicMotifs: memory.sonicMotifs,
-              createdAt: memory.createdAt,
-            },
+    const ns = client.namespace(privateNamespace(sessionId));
+    await ns.write({
+      upsert_rows: [
+        {
+          id: memory.id,
+          attributes: {
+            title: memory.title,
+            text: memory.text,
+            mood: memory.mood,
+            era: memory.era,
+            intensity: memory.intensity,
+            tags: memory.tags,
+            sonicMotifs: memory.sonicMotifs,
+            createdAt: memory.createdAt,
           },
-        ],
-      }),
+        },
+      ],
     });
   } catch {
-    // keep app resilient even if private memory sync fails
+    // keep app resilient
+  }
+}
+
+export async function seedPublicArchetypesInTurbopuffer(docs: ArchetypeDocument[]) {
+  const client = getClient();
+  if (!client) return { ok: false, reason: 'missing-key' };
+
+  try {
+    const ns = client.namespace(PUBLIC_NAMESPACE);
+    await ns.write({
+      upsert_rows: docs.map((doc) => ({
+        id: doc.id,
+        attributes: {
+          title: doc.title,
+          description: doc.description,
+          mood: doc.mood,
+          era: doc.era,
+          intensity: doc.intensity,
+          motifs: doc.motifs,
+          sonicPalette: doc.sonicPalette,
+          soundtrackPrompt: doc.soundtrackPrompt,
+          sfxPrompts: doc.sfxPrompts,
+        },
+      })),
+    });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message : 'seed-failed' };
   }
 }
