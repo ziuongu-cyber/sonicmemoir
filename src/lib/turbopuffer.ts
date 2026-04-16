@@ -11,6 +11,38 @@ function getClient() {
   return new Turbopuffer({ apiKey, region: getRuntimeEnv('TURBOPUFFER_REGION') ?? 'gcp-us-central1', logLevel: 'error' });
 }
 
+async function ensurePublicSchema() {
+  const client = getClient();
+  if (!client) return;
+  const ns = client.namespace(PUBLIC_NAMESPACE);
+  await ns.updateSchema({
+    schema: {
+      title: { type: 'string', full_text_search: true, filterable: true },
+      description: { type: 'string', full_text_search: true },
+      mood: { type: 'string', filterable: true },
+      era: { type: 'string', filterable: true },
+      intensity: { type: 'string', filterable: true },
+      soundtrackPrompt: { type: 'string', full_text_search: true },
+    },
+  });
+}
+
+async function ensurePrivateSchema(sessionId: string) {
+  const client = getClient();
+  if (!client) return;
+  const ns = client.namespace(privateNamespace(sessionId));
+  await ns.updateSchema({
+    schema: {
+      title: { type: 'string', full_text_search: true, filterable: true },
+      text: { type: 'string', full_text_search: true },
+      mood: { type: 'string', filterable: true },
+      era: { type: 'string', filterable: true },
+      intensity: { type: 'string', filterable: true },
+      createdAt: { type: 'string', filterable: true },
+    },
+  });
+}
+
 export async function searchArchetypesViaTurbopuffer(input: {
   text: string;
   mood: string;
@@ -22,6 +54,7 @@ export async function searchArchetypesViaTurbopuffer(input: {
   if (!client) return null;
 
   try {
+    await ensurePublicSchema();
     const ns = client.namespace(PUBLIC_NAMESPACE);
     const result = await ns.query({
       top_k: 5,
@@ -51,6 +84,7 @@ export async function upsertPrivateMemory(sessionId: string, memory: MemoryRecor
   if (!client) return;
 
   try {
+    await ensurePrivateSchema(sessionId);
     const ns = client.namespace(privateNamespace(sessionId));
     await ns.write({
       upsert_rows: [
@@ -77,6 +111,7 @@ export async function seedPublicArchetypesInTurbopuffer(docs: ArchetypeDocument[
   if (!client) return { ok: false, reason: 'missing-key' };
 
   try {
+    await ensurePublicSchema();
     const ns = client.namespace(PUBLIC_NAMESPACE);
     await ns.write({
       upsert_rows: docs.map((doc) => ({
