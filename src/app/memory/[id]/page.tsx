@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Waveform } from '@/components/waveform';
+import { ScenePlayer } from '@/components/scene-player';
 import { getMemoryById } from '@/lib/storage';
 
 export default async function MemoryPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,6 +31,8 @@ export default async function MemoryPage({ params }: { params: Promise<{ id: str
               <Waveform />
             </div>
 
+            <ScenePlayer assets={memory.assets} />
+
             {memory.assets[0]?.status === 'ready' && (memory.assets[0]?.url?.startsWith('data:audio') || memory.assets[0]?.url?.startsWith('https://')) ? (
               <div className="mt-6 rounded-3xl border border-fuchsia-400/20 bg-black/20 p-5">
                 <h2 className="text-lg font-medium">Listen</h2>
@@ -50,7 +53,6 @@ export default async function MemoryPage({ params }: { params: Promise<{ id: str
           <aside className="space-y-6">
             <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
               <h3 className="text-lg font-medium">Scene layers</h3>
-              <p className="mt-3 text-xs text-white/40">Build marker: provider-debug-v2</p>
               <div className="mt-4 space-y-3">
                 {memory.assets.map((asset, index) => (
                   <div key={`${asset.label}-${index}`} className="rounded-2xl border border-white/10 bg-black/20 p-4">

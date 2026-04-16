@@ -6,6 +6,7 @@ import { buildMusicPrompt, deriveMotifs } from '@/lib/prompting';
 import { searchPublicArchetypes, extractPrivateMotifs } from '@/lib/retrieval';
 import { getMemoriesBySession, saveMemory } from '@/lib/storage';
 import { searchArchetypesViaTurbopuffer, upsertPrivateMemory } from '@/lib/turbopuffer';
+import { seedPublicArchetypesIfNeeded } from '@/lib/seed-archetypes';
 import { slugify, uid } from '@/lib/utils';
 
 const schema = z.object({
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
     mood: body.mood as never,
   });
 
+  await seedPublicArchetypesIfNeeded();
   const privateMemories = await getMemoriesBySession(body.sessionId);
   const turbopufferRefs = await searchArchetypesViaTurbopuffer({
     text: normalized.text,
