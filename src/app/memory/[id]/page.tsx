@@ -17,7 +17,7 @@ export default async function MemoryPage({ params }: { params: Promise<{ id: str
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
           <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
             <div className="mb-4 flex flex-wrap gap-2 text-xs uppercase tracking-[0.2em] text-white/45">
-              <span>{memory.mood}</span>
+              <span>{memory.mood || 'cinematic'}</span>
               <span>•</span>
               <span>{memory.era}</span>
               <span>•</span>
@@ -29,6 +29,13 @@ export default async function MemoryPage({ params }: { params: Promise<{ id: str
             <div className="mt-8">
               <Waveform />
             </div>
+
+            {memory.assets[0]?.url?.startsWith('data:audio') || memory.assets[0]?.url?.startsWith('https://') ? (
+              <div className="mt-6 rounded-3xl border border-fuchsia-400/20 bg-black/20 p-5">
+                <h2 className="text-lg font-medium">Listen</h2>
+                <audio controls className="mt-4 w-full" src={memory.assets[0].url} />
+              </div>
+            ) : null}
 
             <div className="mt-8 rounded-3xl border border-white/10 bg-black/20 p-5">
               <h2 className="text-lg font-medium">Soundtrack direction</h2>
@@ -47,6 +54,9 @@ export default async function MemoryPage({ params }: { params: Promise<{ id: str
                       <span className="text-white/45">{asset.duration}s</span>
                     </div>
                     <p className="mt-2 text-xs leading-6 text-white/55">{asset.prompt}</p>
+                    {asset.url?.startsWith('data:audio') || asset.url?.startsWith('https://') ? (
+                      <audio controls className="mt-3 w-full" src={asset.url} />
+                    ) : null}
                   </div>
                 ))}
               </div>

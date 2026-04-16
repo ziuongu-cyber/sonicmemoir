@@ -16,10 +16,11 @@ export function buildMusicPrompt(params: {
   const motifLine = params.privateMotifs.length
     ? `Preserve recurring user sonic DNA motifs: ${params.privateMotifs.join(', ')}.`
     : 'Establish a memorable recurring sonic motif that can return in future memories.';
+  const moodLabel = params.mood?.trim() || 'cinematic';
 
   return [
     `Create a studio-grade cinematic soundtrack for this memory: ${params.text}`,
-    `Mood: ${params.mood}. Era: ${params.era}. Intensity: ${params.intensity}.`,
+    `Mood: ${moodLabel}. Era: ${params.era}. Intensity: ${params.intensity}.`,
     `Important memory tags: ${params.tags.join(', ') || 'personal, emotional, cinematic'}.`,
     `Reference the emotional language and arrangement feel of these retrieved archetypes: ${params.publicRefs
       .map((r) => `${r.title} (${r.soundtrackPrompt})`)

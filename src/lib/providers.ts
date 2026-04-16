@@ -30,18 +30,32 @@ async function elevenlabsFetch(path: string, body: unknown) {
     body: JSON.stringify(body),
   });
 
+  const contentType = response.headers.get('content-type') || '';
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`ElevenLabs error ${response.status}: ${text}`);
   }
 
-  const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
-    return response.json();
+  if (contentType.includes('audio/')) {
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return `data:${contentType};base64,${buffer.toString('base64')}`;
   }
 
-  const buffer = Buffer.from(await response.arrayBuffer());
-  return `data:audio/mpeg;base64,${buffer.toString('base64')}`;
+  return response.json();
+}
+
+function extractAudioUrl(response: unknown): string | null {
+  if (!response) return null;
+  if (typeof response === 'string') return response;
+  if (typeof response !== 'object') return null;
+
+  const candidate = response as Record<string, unknown>;
+  return (
+    (typeof candidate.audio_url === 'string' && candidate.audio_url) ||
+    (typeof candidate.url === 'string' && candidate.url) ||
+    (typeof candidate.audio === 'string' && candidate.audio) ||
+    null
+  );
 }
 
 export async function generateMusic(prompt: string): Promise<GeneratedAsset> {
@@ -52,8 +66,10 @@ export async function generateMusic(prompt: string): Promise<GeneratedAsset> {
   try {
     const response = await elevenlabsFetch('/v1/music', {
       prompt,
-      duration_seconds: 18,
+      music_length_ms: 18000,
     });
+    const audioUrl = extractAudioUrl(response);
+    if (!audioUrl) throw new Error('No music audio returned');
 
     return {
       kind: 'music',
@@ -61,7 +77,7 @@ export async function generateMusic(prompt: string): Promise<GeneratedAsset> {
       prompt,
       duration: 18,
       startAt: 0,
-      url: typeof response === 'string' ? response : response?.url ?? 'about:blank',
+      url: audioUrl,
     };
   } catch {
     return createMockAsset('music', 'Cinematic Score', prompt, 18, 0);
@@ -78,6 +94,8 @@ export async function generateSfx(prompt: string, duration: number, startAt: num
       text: prompt,
       duration_seconds: duration,
     });
+    const audioUrl = extractAudioUrl(response);
+    if (!audioUrl) throw new Error('No SFX audio returned');
 
     return {
       kind: 'sfx',
@@ -85,7 +103,7 @@ export async function generateSfx(prompt: string, duration: number, startAt: num
       prompt,
       duration,
       startAt,
-      url: typeof response === 'string' ? response : response?.url ?? `about:blank#${uid('sfx')}`,
+      url: audioUrl,
     };
   } catch {
     return createMockAsset('sfx', `Scene FX ${index + 1}`, prompt, duration, startAt);
