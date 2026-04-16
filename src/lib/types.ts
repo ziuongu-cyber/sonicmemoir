@@ -39,6 +39,8 @@ export interface GeneratedAsset {
   duration: number;
   startAt?: number;
   url: string;
+  status?: 'ready' | 'mock' | 'failed';
+  debug?: string;
 }
 
 export interface MemoryRecord {
