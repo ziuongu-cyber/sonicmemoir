@@ -5,6 +5,7 @@ import { generateMusic, generateSfx } from '@/lib/providers';
 import { buildMusicPrompt, deriveMotifs } from '@/lib/prompting';
 import { searchPublicArchetypes, extractPrivateMotifs } from '@/lib/retrieval';
 import { getMemoriesBySession, saveMemory } from '@/lib/storage';
+import { searchArchetypesViaTurbopuffer, upsertPrivateMemory } from '@/lib/turbopuffer';
 import { slugify, uid } from '@/lib/utils';
 
 const schema = z.object({
@@ -23,13 +24,22 @@ export async function POST(req: Request) {
   });
 
   const privateMemories = await getMemoriesBySession(body.sessionId);
-  const publicRefs = searchPublicArchetypes({
+  const turbopufferRefs = await searchArchetypesViaTurbopuffer({
     text: normalized.text,
     mood: normalized.mood,
     era: normalized.era,
     intensity: normalized.intensity,
     tags: normalized.tags,
   });
+  const publicRefs = turbopufferRefs?.length
+    ? turbopufferRefs
+    : searchPublicArchetypes({
+        text: normalized.text,
+        mood: normalized.mood,
+        era: normalized.era,
+        intensity: normalized.intensity,
+        tags: normalized.tags,
+      });
 
   const privateMotifs = extractPrivateMotifs(privateMemories);
   const musicPrompt = buildMusicPrompt({
@@ -69,6 +79,8 @@ export async function POST(req: Request) {
     assets: [music, ...sfx],
     shareSlug: `${slugify(title)}-${id.slice(-5)}`,
   });
+
+  await upsertPrivateMemory(body.sessionId, record);
 
   return NextResponse.json({ id: record.id, record });
 }

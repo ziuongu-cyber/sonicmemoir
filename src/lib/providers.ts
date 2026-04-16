@@ -17,19 +17,55 @@ async function createMockAsset(kind: 'music' | 'sfx', label: string, prompt: str
   };
 }
 
+async function elevenlabsFetch(path: string, body: unknown) {
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) return null;
+
+  const response = await fetch(`https://api.elevenlabs.io${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'xi-api-key': apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`ElevenLabs error ${response.status}: ${text}`);
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return `data:audio/mpeg;base64,${buffer.toString('base64')}`;
+}
+
 export async function generateMusic(prompt: string): Promise<GeneratedAsset> {
   if (!process.env.ELEVENLABS_API_KEY) {
     return createMockAsset('music', 'Cinematic Score', prompt, 18, 0);
   }
 
-  return {
-    kind: 'music',
-    label: 'Cinematic Score',
-    prompt,
-    duration: 18,
-    startAt: 0,
-    url: 'https://example.com/replace-with-elevenlabs-music-url',
-  };
+  try {
+    const response = await elevenlabsFetch('/v1/music', {
+      prompt,
+      duration_seconds: 18,
+    });
+
+    return {
+      kind: 'music',
+      label: 'Cinematic Score',
+      prompt,
+      duration: 18,
+      startAt: 0,
+      url: typeof response === 'string' ? response : response?.url ?? 'about:blank',
+    };
+  } catch {
+    return createMockAsset('music', 'Cinematic Score', prompt, 18, 0);
+  }
 }
 
 export async function generateSfx(prompt: string, duration: number, startAt: number, index: number): Promise<GeneratedAsset> {
@@ -37,12 +73,21 @@ export async function generateSfx(prompt: string, duration: number, startAt: num
     return createMockAsset('sfx', `Scene FX ${index + 1}`, prompt, duration, startAt);
   }
 
-  return {
-    kind: 'sfx',
-    label: `Scene FX ${index + 1}`,
-    prompt,
-    duration,
-    startAt,
-    url: `https://example.com/replace-with-elevenlabs-sfx-url/${uid('sfx')}`,
-  };
+  try {
+    const response = await elevenlabsFetch('/v1/sound-generation', {
+      text: prompt,
+      duration_seconds: duration,
+    });
+
+    return {
+      kind: 'sfx',
+      label: `Scene FX ${index + 1}`,
+      prompt,
+      duration,
+      startAt,
+      url: typeof response === 'string' ? response : response?.url ?? `about:blank#${uid('sfx')}`,
+    };
+  } catch {
+    return createMockAsset('sfx', `Scene FX ${index + 1}`, prompt, duration, startAt);
+  }
 }
