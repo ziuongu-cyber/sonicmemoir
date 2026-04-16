@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { MEMORY_PROMPTS } from '@/data/prompt-library';
 import { useRouter } from 'next/navigation';
 
 const moods = ['romantic', 'nostalgic', 'melancholic', 'hopeful', 'joyful', 'bittersweet', 'dreamy', 'cinematic'];
@@ -16,13 +17,22 @@ function getSessionId() {
 
 export function MemoryForm() {
   const router = useRouter();
-  const [text, setText] = useState('the night we danced in the rain in Paris, 2019');
+  const [text, setText] = useState(MEMORY_PROMPTS[0]);
   const [title, setTitle] = useState('Rain in Paris');
   const [mood, setMood] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const chars = useMemo(() => text.length, [text]);
+
+  function handleRandomPrompt() {
+    const pool = MEMORY_PROMPTS.filter((item) => item !== text);
+    const next = pool[Math.floor(Math.random() * pool.length)] ?? MEMORY_PROMPTS[0];
+    setText(next);
+    if (!title.trim() || title === 'Rain in Paris') {
+      setTitle(next.split(/[,.]/)[0].slice(0, 42));
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -82,12 +92,21 @@ export function MemoryForm() {
             ))}
           </select>
         </div>
-        <button
-          disabled={loading || !text.trim()}
-          className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-fuchsia-500 via-violet-500 to-sky-400 px-5 py-3 font-medium text-white transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? 'Scoring your memory...' : 'Generate cinematic memory'}
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleRandomPrompt}
+            className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/6 px-5 py-3 font-medium text-white/85 transition hover:bg-white/10"
+          >
+            Random memory idea
+          </button>
+          <button
+            disabled={loading || !text.trim()}
+            className="inline-flex flex-1 items-center justify-center rounded-2xl bg-gradient-to-r from-fuchsia-500 via-violet-500 to-sky-400 px-5 py-3 font-medium text-white transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? 'Scoring your memory...' : 'Generate cinematic memory'}
+          </button>
+        </div>
         {error ? <p className="text-sm text-rose-300">{error}</p> : null}
       </div>
     </form>
