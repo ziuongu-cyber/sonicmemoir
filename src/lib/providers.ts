@@ -1,4 +1,5 @@
 import type { GeneratedAsset } from '@/lib/types';
+import { getRuntimeEnv } from '@/lib/runtime-env';
 
 function svgDataUrl(label: string, accent: string) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200"><rect width="100%" height="100%" fill="#09090f"/><circle cx="600" cy="600" r="380" fill="${accent}" fill-opacity="0.2"/><text x="50%" y="48%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="Arial" font-size="56">${label}</text><text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#b4b4c7" font-family="Arial" font-size="28">Demo audio placeholder</text></svg>`;
@@ -19,7 +20,7 @@ async function createMockAsset(kind: 'music' | 'sfx', label: string, prompt: str
 }
 
 async function elevenlabsFetch(path: string, body: unknown) {
-  const apiKey = process.env.ELEVENLABS_API_KEY;
+  const apiKey = getRuntimeEnv('ELEVENLABS_API_KEY');
   if (!apiKey) return { ok: false, error: 'Missing ELEVENLABS_API_KEY' };
 
   const response = await fetch(`https://api.elevenlabs.io${path}`, {

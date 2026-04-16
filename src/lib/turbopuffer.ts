@@ -1,11 +1,12 @@
 import type { ArchetypeDocument, MemoryRecord } from '@/lib/types';
+import { getRuntimeEnv } from '@/lib/runtime-env';
 
 const API_BASE = 'https://api.turbopuffer.com/v1';
 const PUBLIC_NAMESPACE = 'sonicmemoir-public-archetypes';
 const privateNamespace = (sessionId: string) => `sonicmemoir-private-${sessionId}`;
 
 async function tpFetch(path: string, init: RequestInit = {}) {
-  const apiKey = process.env.TURBOPUFFER_API_KEY;
+  const apiKey = getRuntimeEnv('TURBOPUFFER_API_KEY');
   if (!apiKey) throw new Error('Missing TURBOPUFFER_API_KEY');
 
   const response = await fetch(`${API_BASE}${path}`, {
@@ -33,7 +34,7 @@ export async function searchArchetypesViaTurbopuffer(input: {
   intensity: string;
   tags: string[];
 }): Promise<ArchetypeDocument[] | null> {
-  if (!process.env.TURBOPUFFER_API_KEY) return null;
+  if (!getRuntimeEnv('TURBOPUFFER_API_KEY')) return null;
 
   try {
     const result = await tpFetch(`/namespaces/${PUBLIC_NAMESPACE}/query`, {
@@ -53,7 +54,7 @@ export async function searchArchetypesViaTurbopuffer(input: {
 }
 
 export async function upsertPrivateMemory(sessionId: string, memory: MemoryRecord) {
-  if (!process.env.TURBOPUFFER_API_KEY) return;
+  if (!getRuntimeEnv('TURBOPUFFER_API_KEY')) return;
 
   try {
     await tpFetch(`/namespaces/${privateNamespace(sessionId)}`, {
