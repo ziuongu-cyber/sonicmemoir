@@ -85,5 +85,5 @@ export async function POST(req: Request) {
 
   const privateUpsert = await upsertPrivateMemory(body.sessionId, record);
 
-  return NextResponse.json({ id: record.id, record, turbopuffer: { seed: seedResult, search: turbopufferSearch.debug ?? null, privateUpsert } });
+  return NextResponse.json({ id: record.id, shareSlug: record.shareSlug, record, turbopuffer: { seed: seedResult, search: turbopufferSearch.debug ?? null, privateUpsert } });
 }

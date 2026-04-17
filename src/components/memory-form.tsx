@@ -46,7 +46,7 @@ export function MemoryForm() {
       });
       if (!response.ok) throw new Error('Generation failed');
       const data = await response.json();
-      router.push(`/memory/${data.id}`);
+      router.push(`/memory/${data.record?.shareSlug ?? data.id}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
