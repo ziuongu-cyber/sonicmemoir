@@ -63,7 +63,7 @@ export async function searchArchetypesViaTurbopuffer(input: {
     });
 
     return {
-      rows: result.rows.map((row) => ({
+      rows: (result.rows ?? []).map((row) => ({
         id: String(row.id),
         title: String(row.title ?? ''),
         description: String(row.description ?? ''),
