@@ -46,6 +46,12 @@ export function MemoryForm() {
       });
       if (!response.ok) throw new Error('Generation failed');
       const data = await response.json();
+      try {
+        const raw = window.localStorage.getItem('sonicmemoir_cached_memories');
+        const existing = raw ? JSON.parse(raw) : [];
+        const next = [data.record, ...existing.filter((item: { id: string }) => item.id !== data.record.id)].slice(0, 25);
+        window.localStorage.setItem('sonicmemoir_cached_memories', JSON.stringify(next));
+      } catch {}
       router.push(`/memory/${data.record?.shareSlug ?? data.id}`);
       router.refresh();
     } catch (err) {

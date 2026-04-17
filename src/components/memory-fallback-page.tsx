@@ -1,14 +1,48 @@
+'use client';
+
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { Waveform } from '@/components/waveform';
 import { ScenePlayer } from '@/components/scene-player';
-import { MemoryFallbackPage } from '@/components/memory-fallback-page';
-import { getMemoryById } from '@/lib/storage';
+import type { MemoryRecord } from '@/lib/types';
 
-export default async function MemoryPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const memory = await getMemoryById(id);
-  if (!memory) return <MemoryFallbackPage id={id} />;
+function getCachedMemory(id: string) {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem('sonicmemoir_cached_memories');
+    if (!raw) return null;
+    const all = JSON.parse(raw) as MemoryRecord[];
+    return all.find((item) => item.id === id || item.shareSlug === id) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function MemoryFallbackPage({ id }: { id: string }) {
+  const [memory, setMemory] = useState<MemoryRecord | null>(null);
+
+  useEffect(() => {
+    setMemory(getCachedMemory(id));
+  }, [id]);
+
+  const hasAudio = useMemo(
+    () => !!memory?.assets?.[0] && (memory.assets[0].url?.startsWith('data:audio') || memory.assets[0].url?.startsWith('https://')),
+    [memory],
+  );
+
+  if (!memory) {
+    return (
+      <main className="min-h-screen bg-[#06070b] px-6 py-10 text-white lg:px-10">
+        <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center backdrop-blur-xl">
+          <h1 className="text-2xl font-semibold">This memory is not available right now.</h1>
+          <p className="mt-4 text-white/60">It may not have finished persisting yet. Try generating again or go back to the timeline.</p>
+          <Link href="/" className="mt-6 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-medium text-black">
+            Back home
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#06070b] px-6 py-10 text-white lg:px-10">
@@ -34,21 +68,12 @@ export default async function MemoryPage({ params }: { params: Promise<{ id: str
 
             <ScenePlayer assets={memory.assets} />
 
-            {memory.assets[0]?.status === 'ready' && (memory.assets[0]?.url?.startsWith('data:audio') || memory.assets[0]?.url?.startsWith('https://')) ? (
+            {hasAudio ? (
               <div className="mt-6 rounded-3xl border border-fuchsia-400/20 bg-black/20 p-5">
                 <h2 className="text-lg font-medium">Listen</h2>
                 <audio controls className="mt-4 w-full" src={memory.assets[0].url} />
               </div>
-            ) : (
-              <div className="mt-6 rounded-3xl border border-amber-400/20 bg-amber-500/10 p-5 text-sm text-amber-100/85">
-                Audio was not generated yet. This memory is showing fallback assets.
-              </div>
-            )}
-
-            <div className="mt-8 rounded-3xl border border-white/10 bg-black/20 p-5">
-              <h2 className="text-lg font-medium">Soundtrack direction</h2>
-              <p className="mt-3 text-sm leading-7 text-white/65">{memory.soundtrackPrompt}</p>
-            </div>
+            ) : null}
           </section>
 
           <aside className="space-y-6">
@@ -62,32 +87,11 @@ export default async function MemoryPage({ params }: { params: Promise<{ id: str
                       <span className="text-white/45">{asset.duration}s</span>
                     </div>
                     <p className="mt-2 text-xs leading-6 text-white/55">{asset.prompt}</p>
-                    <div className="mt-2 text-xs uppercase tracking-[0.2em] text-white/35">{asset.status ?? 'unknown'}</div>
-                    {asset.status === 'ready' && (asset.url?.startsWith('data:audio') || asset.url?.startsWith('https://')) ? (
+                    {asset.url?.startsWith('data:audio') || asset.url?.startsWith('https://') ? (
                       <audio controls className="mt-3 w-full" src={asset.url} />
                     ) : null}
-                    {asset.debug ? <p className="mt-3 text-xs leading-6 text-amber-200/80">{asset.debug}</p> : null}
                   </div>
                 ))}
-              </div>
-            </section>
-
-            <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-              <h3 className="text-lg font-medium">Recurring motifs</h3>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {memory.sonicMotifs.map((motif) => (
-                  <span key={motif} className="rounded-full border border-white/10 px-3 py-1 text-sm text-white/65">
-                    {motif}
-                  </span>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-              <h3 className="text-lg font-medium">Share</h3>
-              <div className="mt-4 space-y-3 text-sm text-white/65">
-                <p>Public clip page: <span className="text-fuchsia-300">/api/share/{memory.shareSlug}</span></p>
-                <p>Perfect for 15-second TikTok or Instagram cutdowns once real audio exports are connected.</p>
               </div>
             </section>
           </aside>
